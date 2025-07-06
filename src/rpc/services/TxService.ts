@@ -1,12 +1,18 @@
 import type { ServerUnaryCall, sendUnaryData } from "@grpc/grpc-js";
+import { ethers } from "ethers";
+
 import type {
   TransactionServiceServer,
   BuildTxRequest,
   BuildTxResponse,
 } from "@/generated/transaction";
-import { PancakeAdapter } from "@/protocols/pancake/PancakeAdapter";
+import {
+  PANCAKE_ROUTER,
+  PancakeAdapter,
+} from "@/protocols/pancake/PancakeAdapter";
 import { logger } from "@/bootstrap/logger";
-import { ethers } from "ethers";
+import { Transaction } from "ethers";
+import { populateTx } from "@/lib/tx-utils";
 
 const pancakeAdapter = new PancakeAdapter();
 
@@ -31,13 +37,25 @@ export const buildUnsignedTx: TransactionServiceServer["buildUnsignedTx"] =
         slippageBps || 50
       );
 
-      const base64Tx = Buffer.from(
-        ethers.Transaction.from(unsignedTx).serialized
-      ).toString("base64");
+      const fullTx = await populateTx(unsignedTx, pancakeAdapter.provider);
+      const { from, ...txWithoutFrom } = unsignedTx as any;
+      const rawHex = Transaction.from(txWithoutFrom).unsignedSerialized;
+      const base64Tx = Buffer.from(rawHex.slice(2), "hex").toString("base64");
 
       cb(null, {
         unsignedTxBase64: base64Tx,
         txInfo: `Swap ${amountInWei} of ${tokenIn} → ${tokenOut}`,
+        txParams: {
+          from,
+          to: fullTx.to?.toString()!,
+          data: fullTx.data!,
+          gasLimit: fullTx.gasLimit!.toString(),
+          gasPrice: fullTx.gasPrice!.toString(),
+          value: fullTx.value?.toString() ?? "0",
+          nonce: fullTx.nonce!.toString(),
+          chainId: Number(fullTx.chainId),
+          type: fullTx.type ?? 0,
+        },
       });
     } catch (err: any) {
       logger.error("[buildUnsignedTx] failed", err);

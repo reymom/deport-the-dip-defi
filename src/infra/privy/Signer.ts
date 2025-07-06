@@ -1,9 +1,6 @@
 import { Buffer } from "buffer";
-import {
-  PrivyClient,
-  type EthereumSignTransactionInputType,
-} from "@privy-io/server-auth";
-import { ethers, isHexString, toBeHex } from "ethers";
+import { ethers } from "ethers";
+import { PrivyClient } from "@privy-io/server-auth";
 
 import {
   PRIVY_APP_ID,
@@ -12,7 +9,7 @@ import {
   BSC_RPC,
 } from "@/bootstrap/env";
 import type { UserContext } from "@/generated/pancake";
-import { logger } from "@/bootstrap/logger";
+import { populateTx, toPrivyTx } from "@/lib/tx-utils";
 
 type Did = string;
 
@@ -49,94 +46,18 @@ export class PrivySigner {
     provider: ethers.JsonRpcProvider = new ethers.JsonRpcProvider(BSC_RPC)
   ): Promise<[string, string]> {
     // Normalise & fill missing fields
-    const populated: ethers.TransactionRequest = await this.populateTx(
-      tx,
-      provider
-    );
+    const populated: ethers.TransactionRequest = await populateTx(tx, provider);
 
     const { signedTransaction }: { signedTransaction: string } =
       await this.privy.walletApi.ethereum.signTransaction({
         walletId,
-        transaction: this.toPrivyTx(populated),
+        transaction: toPrivyTx(populated),
       });
 
     const txHash = ethers.keccak256(signedTransaction as `0x${string}`);
 
     if (broadcast) await provider.broadcastTransaction(signedTransaction);
     return [signedTransaction, txHash];
-  }
-
-  private async populateTx(
-    tx: ethers.TransactionRequest,
-    provider: ethers.JsonRpcProvider
-  ): Promise<ethers.TransactionRequest> {
-    const populated = { ...tx };
-
-    // -------- required fields --------
-    if (populated.nonce === undefined) {
-      logger.info("[populateTx] getting nonce");
-      populated.nonce = await provider.getTransactionCount(
-        tx.from?.toString()!,
-        "pending"
-      );
-      logger.info(`[populateTx] nonce is:  ${populated.nonce}`);
-    }
-
-    if (populated.gasLimit == null)
-      populated.gasLimit = await provider.estimateGas(populated);
-
-    const fee = await provider.getFeeData();
-
-    /* ---------- BSC (no EIP-1559) ---------- */
-    if (fee.maxFeePerGas == null) {
-      // fallback to legacy
-      populated.gasPrice = fee.gasPrice!;
-      populated.type = 0; // <- force legacy
-    } else {
-      // chains that support 1559
-      populated.maxFeePerGas = fee.maxFeePerGas!;
-      populated.maxPriorityFeePerGas = fee.maxPriorityFeePerGas!;
-      populated.type = 2;
-    }
-
-    if (populated.chainId == null)
-      populated.chainId = (await provider.getNetwork()).chainId;
-
-    logger.info(
-      `[populateTx] populated = ${JSON.stringify(
-        populated,
-        (key, value) => (typeof value === "bigint" ? value.toString() : value),
-        2
-      )}`
-    );
-    return populated;
-  }
-
-  private toPrivyTx(
-    tx: ethers.TransactionRequest
-  ): EthereumSignTransactionInputType["transaction"] {
-    const t: Record<string, any> = { ...tx };
-
-    // These fields must be hex strings
-    [
-      "value",
-      "gasLimit",
-      "gasPrice",
-      "maxFeePerGas",
-      "maxPriorityFeePerGas",
-      "nonce",
-      "chainId",
-    ].forEach((k) => {
-      if (t[k] != null) {
-        // ethers.toBeHex() handles bigint, number, hex-string idempotently
-        t[k] = ethers.toBeHex(t[k]);
-      }
-    });
-
-    // Strip undefined / null
-    Object.keys(t).forEach((k) => t[k] == null && delete t[k]);
-
-    return t as EthereumSignTransactionInputType["transaction"];
   }
 }
 
