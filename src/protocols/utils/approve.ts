@@ -1,5 +1,6 @@
 import { logger } from "@/bootstrap/logger";
-import { Contract, type Signer } from "ethers";
+import type { TransactionRequest } from "ethers";
+import { Contract, ethers, type Signer } from "ethers";
 
 const ERC20_MIN_ABI = [
   "function allowance(address owner,address spender) view returns (uint256)",
@@ -46,6 +47,37 @@ export async function ensureAllowance(
       2
     )}`
   );
-  const resp = await signer.sendTransaction(approveTxReq);
-  await resp.wait();
+
+  try {
+    const resp = await signer.sendTransaction(approveTxReq);
+    await resp.wait();
+    logger.info(`[allowance] approve mined → ${resp.hash}`);
+    return;
+  } catch (err: any) {
+    const duplicate =
+      err?.message?.includes("already known") ||
+      err?.error?.message?.includes("already known");
+
+    if (duplicate) {
+      logger.warn("[allowance] pending duplicate detected - cancelling nonce");
+      await cancelPendingTx(signer, approveTxReq.nonce!, 200n);
+    }
+  }
+}
+
+async function cancelPendingTx(
+  signer: ethers.Signer, // delegated signer
+  nonce: number, // 0 in your case
+  gasPriceGwei = 200n // something > previous 100 gwei
+) {
+  const cancelTx = {
+    from: await signer.getAddress(),
+    to: await signer.getAddress(), // self-send
+    value: 0,
+    nonce,
+    gasPrice: gasPriceGwei * 10n ** 9n,
+    gasLimit: 21_000,
+  };
+  const resp = await signer.sendTransaction(cancelTx);
+  await resp.wait(); // mined -> nonce 0 is now used
 }
