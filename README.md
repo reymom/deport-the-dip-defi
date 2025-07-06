@@ -44,8 +44,8 @@ docker run --rm -it --network=host -v "$(pwd)/proto":/proto \
   -import-path /proto -proto pancake.proto \
   -d '{
     "user": {
-      "address":  "0x5ce5010e79Be3dCE38e753C335bd26B164949c26",
-      "wallet_id":"jdgltqdrkh0m9bce2s6lh7fi"
+      "address":  "",
+      "wallet_id":""
     },
     "token_in":   "0x55d398326f99059ff775485246999027b3197955",
     "token_out":  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
