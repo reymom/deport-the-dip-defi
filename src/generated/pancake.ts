@@ -25,8 +25,6 @@ export interface SwapRequest {
   user:
     | UserContext
     | undefined;
-  /** who we’re copying */
-  leaderPubkey: string;
   /** ERC-20 address */
   tokenIn: string;
   /** ERC-20 address */
@@ -56,7 +54,7 @@ export interface UserContext {
 }
 
 function createBaseSwapRequest(): SwapRequest {
-  return { user: undefined, leaderPubkey: "", tokenIn: "", tokenOut: "", amountInWei: "", slippageBps: 0 };
+  return { user: undefined, tokenIn: "", tokenOut: "", amountInWei: "", slippageBps: 0 };
 }
 
 export const SwapRequest: MessageFns<SwapRequest> = {
@@ -64,20 +62,17 @@ export const SwapRequest: MessageFns<SwapRequest> = {
     if (message.user !== undefined) {
       UserContext.encode(message.user, writer.uint32(10).fork()).join();
     }
-    if (message.leaderPubkey !== "") {
-      writer.uint32(18).string(message.leaderPubkey);
-    }
     if (message.tokenIn !== "") {
-      writer.uint32(26).string(message.tokenIn);
+      writer.uint32(18).string(message.tokenIn);
     }
     if (message.tokenOut !== "") {
-      writer.uint32(34).string(message.tokenOut);
+      writer.uint32(26).string(message.tokenOut);
     }
     if (message.amountInWei !== "") {
-      writer.uint32(42).string(message.amountInWei);
+      writer.uint32(34).string(message.amountInWei);
     }
     if (message.slippageBps !== 0) {
-      writer.uint32(48).uint64(message.slippageBps);
+      writer.uint32(40).uint64(message.slippageBps);
     }
     return writer;
   },
@@ -102,7 +97,7 @@ export const SwapRequest: MessageFns<SwapRequest> = {
             break;
           }
 
-          message.leaderPubkey = reader.string();
+          message.tokenIn = reader.string();
           continue;
         }
         case 3: {
@@ -110,7 +105,7 @@ export const SwapRequest: MessageFns<SwapRequest> = {
             break;
           }
 
-          message.tokenIn = reader.string();
+          message.tokenOut = reader.string();
           continue;
         }
         case 4: {
@@ -118,19 +113,11 @@ export const SwapRequest: MessageFns<SwapRequest> = {
             break;
           }
 
-          message.tokenOut = reader.string();
-          continue;
-        }
-        case 5: {
-          if (tag !== 42) {
-            break;
-          }
-
           message.amountInWei = reader.string();
           continue;
         }
-        case 6: {
-          if (tag !== 48) {
+        case 5: {
+          if (tag !== 40) {
             break;
           }
 
@@ -149,7 +136,6 @@ export const SwapRequest: MessageFns<SwapRequest> = {
   fromJSON(object: any): SwapRequest {
     return {
       user: isSet(object.user) ? UserContext.fromJSON(object.user) : undefined,
-      leaderPubkey: isSet(object.leaderPubkey) ? globalThis.String(object.leaderPubkey) : "",
       tokenIn: isSet(object.tokenIn) ? globalThis.String(object.tokenIn) : "",
       tokenOut: isSet(object.tokenOut) ? globalThis.String(object.tokenOut) : "",
       amountInWei: isSet(object.amountInWei) ? globalThis.String(object.amountInWei) : "",
@@ -161,9 +147,6 @@ export const SwapRequest: MessageFns<SwapRequest> = {
     const obj: any = {};
     if (message.user !== undefined) {
       obj.user = UserContext.toJSON(message.user);
-    }
-    if (message.leaderPubkey !== "") {
-      obj.leaderPubkey = message.leaderPubkey;
     }
     if (message.tokenIn !== "") {
       obj.tokenIn = message.tokenIn;
@@ -188,7 +171,6 @@ export const SwapRequest: MessageFns<SwapRequest> = {
     message.user = (object.user !== undefined && object.user !== null)
       ? UserContext.fromPartial(object.user)
       : undefined;
-    message.leaderPubkey = object.leaderPubkey ?? "";
     message.tokenIn = object.tokenIn ?? "";
     message.tokenOut = object.tokenOut ?? "";
     message.amountInWei = object.amountInWei ?? "";

@@ -40,6 +40,7 @@ export interface BuildTxRequest {
 export interface BuildTxResponse {
   unsignedTxBase64: string;
   txInfo: string;
+  txParams: TxParams | undefined;
 }
 
 export interface SubmitTxRequest {
@@ -50,6 +51,18 @@ export interface SubmitTxRequest {
 export interface SubmitTxResponse {
   txHash: string;
   explorerUrl: string;
+}
+
+export interface TxParams {
+  to: string;
+  data: string;
+  from: string;
+  gasLimit: string;
+  gasPrice: string;
+  value: string;
+  nonce: string;
+  chainId: number;
+  type: number;
 }
 
 function createBasePancakePayload(): PancakePayload {
@@ -239,7 +252,7 @@ export const BuildTxRequest: MessageFns<BuildTxRequest> = {
 };
 
 function createBaseBuildTxResponse(): BuildTxResponse {
-  return { unsignedTxBase64: "", txInfo: "" };
+  return { unsignedTxBase64: "", txInfo: "", txParams: undefined };
 }
 
 export const BuildTxResponse: MessageFns<BuildTxResponse> = {
@@ -249,6 +262,9 @@ export const BuildTxResponse: MessageFns<BuildTxResponse> = {
     }
     if (message.txInfo !== "") {
       writer.uint32(18).string(message.txInfo);
+    }
+    if (message.txParams !== undefined) {
+      TxParams.encode(message.txParams, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -276,6 +292,14 @@ export const BuildTxResponse: MessageFns<BuildTxResponse> = {
           message.txInfo = reader.string();
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.txParams = TxParams.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -289,6 +313,7 @@ export const BuildTxResponse: MessageFns<BuildTxResponse> = {
     return {
       unsignedTxBase64: isSet(object.unsignedTxBase64) ? globalThis.String(object.unsignedTxBase64) : "",
       txInfo: isSet(object.txInfo) ? globalThis.String(object.txInfo) : "",
+      txParams: isSet(object.txParams) ? TxParams.fromJSON(object.txParams) : undefined,
     };
   },
 
@@ -300,6 +325,9 @@ export const BuildTxResponse: MessageFns<BuildTxResponse> = {
     if (message.txInfo !== "") {
       obj.txInfo = message.txInfo;
     }
+    if (message.txParams !== undefined) {
+      obj.txParams = TxParams.toJSON(message.txParams);
+    }
     return obj;
   },
 
@@ -310,6 +338,9 @@ export const BuildTxResponse: MessageFns<BuildTxResponse> = {
     const message = createBaseBuildTxResponse();
     message.unsignedTxBase64 = object.unsignedTxBase64 ?? "";
     message.txInfo = object.txInfo ?? "";
+    message.txParams = (object.txParams !== undefined && object.txParams !== null)
+      ? TxParams.fromPartial(object.txParams)
+      : undefined;
     return message;
   },
 };
@@ -462,6 +493,194 @@ export const SubmitTxResponse: MessageFns<SubmitTxResponse> = {
     const message = createBaseSubmitTxResponse();
     message.txHash = object.txHash ?? "";
     message.explorerUrl = object.explorerUrl ?? "";
+    return message;
+  },
+};
+
+function createBaseTxParams(): TxParams {
+  return { to: "", data: "", from: "", gasLimit: "", gasPrice: "", value: "", nonce: "", chainId: 0, type: 0 };
+}
+
+export const TxParams: MessageFns<TxParams> = {
+  encode(message: TxParams, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.to !== "") {
+      writer.uint32(10).string(message.to);
+    }
+    if (message.data !== "") {
+      writer.uint32(18).string(message.data);
+    }
+    if (message.from !== "") {
+      writer.uint32(26).string(message.from);
+    }
+    if (message.gasLimit !== "") {
+      writer.uint32(34).string(message.gasLimit);
+    }
+    if (message.gasPrice !== "") {
+      writer.uint32(42).string(message.gasPrice);
+    }
+    if (message.value !== "") {
+      writer.uint32(50).string(message.value);
+    }
+    if (message.nonce !== "") {
+      writer.uint32(58).string(message.nonce);
+    }
+    if (message.chainId !== 0) {
+      writer.uint32(64).uint64(message.chainId);
+    }
+    if (message.type !== 0) {
+      writer.uint32(72).uint32(message.type);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TxParams {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTxParams();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.to = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.data = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.from = reader.string();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.gasLimit = reader.string();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.gasPrice = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.nonce = reader.string();
+          continue;
+        }
+        case 8: {
+          if (tag !== 64) {
+            break;
+          }
+
+          message.chainId = longToNumber(reader.uint64());
+          continue;
+        }
+        case 9: {
+          if (tag !== 72) {
+            break;
+          }
+
+          message.type = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TxParams {
+    return {
+      to: isSet(object.to) ? globalThis.String(object.to) : "",
+      data: isSet(object.data) ? globalThis.String(object.data) : "",
+      from: isSet(object.from) ? globalThis.String(object.from) : "",
+      gasLimit: isSet(object.gasLimit) ? globalThis.String(object.gasLimit) : "",
+      gasPrice: isSet(object.gasPrice) ? globalThis.String(object.gasPrice) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+      nonce: isSet(object.nonce) ? globalThis.String(object.nonce) : "",
+      chainId: isSet(object.chainId) ? globalThis.Number(object.chainId) : 0,
+      type: isSet(object.type) ? globalThis.Number(object.type) : 0,
+    };
+  },
+
+  toJSON(message: TxParams): unknown {
+    const obj: any = {};
+    if (message.to !== "") {
+      obj.to = message.to;
+    }
+    if (message.data !== "") {
+      obj.data = message.data;
+    }
+    if (message.from !== "") {
+      obj.from = message.from;
+    }
+    if (message.gasLimit !== "") {
+      obj.gasLimit = message.gasLimit;
+    }
+    if (message.gasPrice !== "") {
+      obj.gasPrice = message.gasPrice;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    if (message.nonce !== "") {
+      obj.nonce = message.nonce;
+    }
+    if (message.chainId !== 0) {
+      obj.chainId = Math.round(message.chainId);
+    }
+    if (message.type !== 0) {
+      obj.type = Math.round(message.type);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<TxParams>, I>>(base?: I): TxParams {
+    return TxParams.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<TxParams>, I>>(object: I): TxParams {
+    const message = createBaseTxParams();
+    message.to = object.to ?? "";
+    message.data = object.data ?? "";
+    message.from = object.from ?? "";
+    message.gasLimit = object.gasLimit ?? "";
+    message.gasPrice = object.gasPrice ?? "";
+    message.value = object.value ?? "";
+    message.nonce = object.nonce ?? "";
+    message.chainId = object.chainId ?? 0;
+    message.type = object.type ?? 0;
     return message;
   },
 };
